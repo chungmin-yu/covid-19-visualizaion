@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v4.js"></script>
+
+<!-- Create a div where the graph will take place -->
+<svg id="dataviz" style="background:#fff;" viewbox="0,0,1200,400" preserveAspectRatio="xMinYMin meet">></svg>
+
+<script>
+
+// set the dimensions and margins of the graph
+var margin = {top: 10, right: 150, bottom: 20, left: 50};
+var size = 400;
+var width = 3*size - margin.left - margin.right,
+    height = size - margin.top - margin.bottom;
+
+//Read the data
+d3.csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv", function(data1){
+  d3.csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv", function(data2){
+    d3.csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv", function(data3){
+      console.log(data1);
+      console.log(data2);
+      console.log(data3);
+      var dataARR=[];
+      var rawdataC=data1[239];
+      var rawdataD=data2[239];
+      var rawdataR=data3[239];
+      var key = Object.keys(rawdataR);
+      var len = key.length;
+      var valueC = Object.values(rawdataC);
+      var valueD = Object.values(rawdataD);
+      var valueR = Object.values(rawdataR);
+
+
+      for(var i=len-7; i<len; i++){
+        var arr={};
+        arr.group=key[i];
+        arr.confirmed=valueC[i];
+        arr.death=valueD[i];
+        arr.recovered=valueR[i];
+        dataARR.push(arr);
+      }
+      console.log(dataARR);
+      draw(dataARR);
+
+      function draw(data){
+        // append the svg object to the body of the page
+        var svg = d3.select("#dataviz")
+          .append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+      
+        // List of subgroups = header of the csv files = soil condition here
+        //var subgroups = data.columns.slice(1)
+        var subgroups = ["confirmed","death","recovered"];
+        // List of groups = species here = value of the first column called group -> I show them on the X axis
+        var groups = d3.map(data, function(d){return(d.group)}).keys()
+
+        // Add X axis
+        var x = d3.scaleBand()
+            .domain(groups)
+            .range([0, width])
+            .padding([0.2])
+        svg.append("g")
+          .attr("transform", "translate(0," + height + ")")
+          .call(d3.axisBottom(x).tickSize(0));
+
+        // Add Y axis
+        var y = d3.scaleLinear()
+          .domain([0, d3.max(data, function(d) { return +d.confirmed; })])
+          .range([ height, 0 ]);
+        svg.append("g")
+          .call(d3.axisLeft(y));
+
+        // Another scale for subgroup position?
+        var xSubgroup = d3.scaleBand()
+          .domain(subgroups)
+          .range([0, x.bandwidth()])
+          .padding([0.05])
+
+        // color palette = one color per subgroup
+        var color = d3.scaleOrdinal()
+          .domain(subgroups)
+          .range(['steelblue','red','green'])
+
+        // Show the bars
+        var bar = svg.append("g")
+          .selectAll("g")
+          // Enter in data = loop group per group
+          .data(data)
+          .enter()
+          .append("g")
+            .attr("transform", function(d) { return "translate(" + x(d.group) + ",0)"; })
+          .selectAll("rect")
+          .data(function(d) { return subgroups.map(function(key) { return {key: key, value: d[key]}; }); })
+          .enter();
+          bar.append("rect")
+            .attr("x", function(d) { return xSubgroup(d.key); })
+            .attr("y", function(d) { return y(d.value); })
+            .attr("width", xSubgroup.bandwidth())
+            .attr("height", function(d) { return height - y(d.value); })
+            .attr("fill", function(d) { return color(d.key); });
+          bar.append("text")
+            .attr("x", function(d) { return xSubgroup(d.key); })
+            .attr("y", function(d) { return y(d.value); })
+            .text(function(d) { console.log(d.value); return d.value; })
+            .style('font-size', '0.7em');
+
+          svg.append("text")
+            .attr("x",width+10)
+            .attr("y",height/3+5)
+            .text("confirmed cases")
+            .style("fill","steelblue");
+          svg.append("circle")
+            .attr("cx",width)
+            .attr("cy",height/3)
+            .attr("r",5)
+            .style("fill","steelblue");
+            svg.append("text")
+            .attr("x",width+10)
+            .attr("y",height/2+5)
+            .text("death cases")
+            .style("fill","red");
+          svg.append("circle")
+            .attr("cx",width)
+            .attr("cy",height/2)
+            .attr("r",5)
+            .style("fill","red");
+          svg.append("text")
+            .attr("x",width+10)
+            .attr("y",2*height/3+5)
+            .text("recoverd cases")
+            .style("fill","green");
+          svg.append("circle")
+            .attr("cx",width)
+            .attr("cy",2*height/3)
+            .attr("r",5)
+            .style("fill","green");
+      }
+    })     
+  })
+});
+
+</script>
